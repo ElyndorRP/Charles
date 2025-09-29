@@ -3,434 +3,316 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Assistant 2000+ lignes — statique</title>
-  <meta name="description" content="Assistant local HTML autonome (version volumineuse) — sauvegarde locale, KB étendue, TTS simple, export/import" />
+  <title>Mini-assistant — Édition Méga</title>
+  <meta name="description" content="Assistant local HTML/JS — méga version : multi-conv, édition, TTS, planification, tags, analytics, sauvegardes" />
   <style>
-    :root{
-      --bg:#071428; --panel:#071026; --accent:#06b6d4; --muted:#a9cbdc; --radius:12px; --text:#e6eef8;
-    }
-    html,body{height:100%;margin:0;background:linear-gradient(180deg,#02101a,#071127);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Arial}
-    .wrap{max-width:1200px;margin:18px auto;padding:18px}
-    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02));padding:16px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.6)}
-    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-    h1{margin:0;font-size:20px}
-    .meta{font-size:13px;color:var(--muted)}
-    .chat{border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.02));padding:12px;margin-top:12px}
-    textarea{width:100%;min-height:100px;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--text)}
-    .controls{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
-    button{background:var(--accent);border:none;padding:9px 12px;border-radius:8px;color:#042027;font-weight:700;cursor:pointer}
+    :root{--bg:#051025;--panel:#081427;--muted:#a9c3d6;--accent:#06b6d4;--accent2:#8b5cf6;--card:#071424;--glass:rgba(255,255,255,0.03);--radius:14px;--text:#e6eef8}
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#021122 0%,#07152a 100%);color:var(--text);}
+    .container{max-width:1400px;margin:16px auto;display:grid;grid-template-columns:280px 1fr 360px;gap:16px;padding:16px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02));padding:12px;border-radius:var(--radius);box-shadow:0 10px 40px rgba(0,0,0,0.6)}
+    /* LEFT */
+    .left{display:flex;flex-direction:column;gap:12px}
+    .logo{width:52px;height:52px;border-radius:10px;background:linear-gradient(180deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:800}
+    .conv-list{max-height:64vh;overflow:auto;margin-top:8px;display:flex;flex-direction:column;gap:8px}
+    .conv-item{padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);cursor:pointer;display:flex;justify-content:space-between}
+    .conv-item.active{background:linear-gradient(90deg, rgba(6,182,212,0.06), rgba(139,92,246,0.06));border-color:rgba(6,182,212,0.12)}
+    /* CENTER */
+    .center{display:flex;flex-direction:column;height:82vh}
+    .chat{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px;border-radius:10px;background:linear-gradient(180deg, rgba(6,18,32,0.12), rgba(2,6,12,0.06));border:1px solid rgba(255,255,255,0.02)}
+    .msg{max-width:80%;padding:10px 12px;border-radius:12px;line-height:1.4;white-space:pre-wrap}
+    .user{margin-left:auto;background:linear-gradient(180deg,#084d57,#0a6b6e);border:1px solid rgba(255,255,255,0.03)}
+    .bot{background:linear-gradient(180deg,#062038,#06314a);border:1px solid rgba(255,255,255,0.02)}
+    .meta{font-size:12px;color:var(--muted);margin-top:6px}
+    .composer{display:flex;gap:8px;align-items:flex-end;padding-top:10px}
+    textarea{flex:1;min-height:80px;max-height:320px;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--muted);resize:none}
+    /* RIGHT */
+    .right{display:flex;flex-direction:column;gap:12px}
+    .panel{padding:12px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.02));border:1px solid rgba(255,255,255,0.02)}
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,0.03);cursor:pointer}
+    /* helpers */
     .row{display:flex;gap:8px;align-items:center}
-    .msg{padding:8px;margin:8px 0;border-radius:8px}
-    .user{background:linear-gradient(90deg,#06424a,#075a5e)}
-    .bot{background:linear-gradient(90deg,#08223a,#07324a)}
     .small{font-size:13px;color:var(--muted)}
-    pre.kb{background:#021424;padding:12px;border-radius:8px;max-height:320px;overflow:auto}
-    footer{margin-top:18px;font-size:13px;color:var(--muted)}
+    .hidden{display:none}
+    @media (max-width:1100px){.container{grid-template-columns:1fr;padding:8px}.right{order:3}.left{order:2}.center{order:1;height:70vh}}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <header>
+  <div class="container">
+    <!-- LEFT: conversations -->
+    <div class="card left">
+      <div style="display:flex;gap:12px;align-items:center">
+        <div class="logo">AI</div>
         <div>
-          <h1>Assistant local — version statique (2000+ lignes)</h1>
-          <div class="meta">Tout reste local — pas de serveur. Copie le fichier dans Fichiers (iPad) et ouvre avec Safari.</div>
+          <div style="font-weight:700">Mini-assistant Méga</div>
+          <div class="small">Offline / local</div>
+        </div>
+      </div>
+
+      <div style="margin-top:10px" class="row">
+        <button id="btnNew" class="chip">+ Nouvelle</button>
+        <button id="btnImport" class="chip">Importer</button>
+        <button id="btnExportAll" class="chip">Exporter tout</button>
+      </div>
+
+      <div style="margin-top:10px">
+        <input id="convSearch" type="text" placeholder="Rechercher conversations..." style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--muted)" />
+      </div>
+
+      <div class="conv-list" id="convList"></div>
+
+      <div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">
+        <div class="small">Conversations: <span id="nbConv">0</span></div>
+        <div class="small">Messages: <span id="nbMsg">0</span></div>
+      </div>
+    </div>
+
+    <!-- CENTER: chat -->
+    <div class="card center">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="small">Conversation: <strong id="convTitle">— aucune —</strong></div>
+          <div class="small">Commandes: /help /about /clear /calc /schedule</div>
         </div>
         <div class="row">
-          <button id="exportBtn">Exporter JSON</button>
-          <button id="clearBtn">Effacer</button>
+          <button id="btnRename" class="chip">Renommer</button>
+          <button id="btnDuplicate" class="chip">Dupliquer</button>
+          <button id="btnDelete" class="chip">Supprimer</button>
         </div>
-      </header>
+      </div>
 
-      <section class="chat">
-        <div id="transcript"></div>
+      <div id="chat" class="chat"></div>
 
-        <textarea id="inputMain" placeholder="Écris un message ou tape /help pour la liste des commandes..."></textarea>
-
-        <div class="controls">
-          <button id="sendBtn">Envoyer</button>
-          <button id="teachBtn">Enseigner (ajoute:clé=>réponse)</button>
-          <button id="ttsToggle">TTS: ON</button>
-          <button id="downloadBtn">Télécharger page</button>
+      <div class="composer">
+        <textarea id="input" placeholder="Écris un message, /help pour l'aide... (Shift+Enter = nouvelle ligne)"></textarea>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button id="send" class="chip">Envoyer</button>
+          <button id="btnClear" class="chip">/clear</button>
         </div>
+      </div>
 
-        <div style="margin-top:12px" class="small">Exemples rapides: <button class="quick" data-text="Bonjour">Bonjour</button> <button class="quick" data-text="Raconte une blague">Blague</button> <button class="quick" data-text="Donne-moi une idée de déjeuner">Déjeuner</button></div>
+      <div style="margin-top:6px;display:flex;justify-content:space-between;align-items:center">
+        <div class="small">Raccourci: Ctrl+N nouvelle conv, Ctrl+S exporter</div>
+        <div class="small">Stockage: <span id="usage">—</span></div>
+      </div>
+    </div>
 
-        <hr/>
+    <!-- RIGHT: tools -->
+    <div class="card right">
+      <div class="panel">
+        <strong>Outils rapides</strong>
+        <div style="margin-top:8px" class="chips">
+          <div class="chip" data-text="Bonjour">Bonjour</div>
+          <div class="chip" data-text="Raconte une blague">Blague</div>
+          <div class="chip" data-text="Donne-moi une idée de déjeuner">Déjeuner</div>
+        </div>
+        <div style="margin-top:10px" class="row">
+          <button id="ttsToggle" class="chip">TTS: ON</button>
+          <button id="exportConv" class="chip">Exporter conv</button>
+        </div>
+      </div>
 
-        <div class="small">Base de connaissances (extrait)</div>
-        <pre class="kb" id="kbPreview"></pre>
+      <div class="panel">
+        <strong>Planificateur</strong>
+        <div style="margin-top:8px" class="small">Planifie un envoi: <code>/schedule 2025-12-31T23:59:00 Ton message</code></div>
+        <div style="margin-top:8px" class="small">Messages planifiés: <ul id="schedList"></ul></div>
+      </div>
 
-      </section>
-
-      <footer>
-        <div class="small">Version statique préremplie — contient de nombreux exemples et commentaires pour atteindre la taille demandée.</div>
-      </footer>
+      <div class="panel">
+        <strong>Analytics</strong>
+        <canvas id="chart" width="300" height="140" style="width:100%;height:140px;background:rgba(255,255,255,0.01);border-radius:8px"></canvas>
+        <div style="margin-top:8px" class="small">Messages total: <span id="statTotal">0</span></div>
+      </div>
     </div>
   </div>
 
-  <script>
-    // =========================
-    // Assistant statique local
-    // - KB volumineuse préremplie
-    // - commandes : /help, /about, /clear, /calc, /stats
-    // - enseignement : ajoute:clé=>réponse
-    // - TTS (navigateur)
-    // =========================
-
-    // TTS toggle
-    let ttsEnabled = true;
-    const ttsToggle = document.getElementById('ttsToggle');
-    ttsToggle.addEventListener('click', ()=>{ ttsEnabled = !ttsEnabled; ttsToggle.textContent = 'TTS: ' + (ttsEnabled ? 'ON' : 'OFF'); });
-
-    // Transcript handling
-    const transcript = document.getElementById('transcript');
-    function append(text, who='bot'){
-      const d = document.createElement('div');
-      d.className = 'msg ' + (who==='user' ? 'user' : 'bot');
-      d.innerHTML = text.replace(/\\n/g,'<br/>');
-      transcript.appendChild(d);
-      transcript.scrollTop = transcript.scrollHeight;
-      if(who==='bot' && ttsEnabled && 'speechSynthesis' in window){
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = 'fr-FR';
-        window.speechSynthesis.speak(u);
-      }
-    }
-
-    // Prepopulated knowledge base (large)
-    const KB = {};
-    // NOTE: KB pré-générée pour gonfler le fichier — contient de nombreuses clés 'idee1'...'idee1200'
-    // Exemples d'entrées (répétées et variées) :
-    // (La section suivante contient 1200+ lignes d'entrée KB pour atteindre target size.)
-
-    <!-- DÉBUT KB PRÉREMPLI -->
-  </script>
-
-  <!-- Pour des raisons de lisibilité sur iPad, la base de connaissances complète suit en texte brut.
-       Sélectionne tout (à partir d'ici) jusqu'à la fin, copie, puis colle dans un nouveau fichier .html. -->
+  <input id="fileImport" type="file" accept="application/json" class="hidden" />
 
   <script>
-    // (Les lignes qui suivent sont construite pour être collées dans le même fichier — elles font partie du code)
-    // Remplissage KB (extrait, l'original contient beaucoup plus d'entrées)
-    KB['bonjour'] = "Salut ! Je suis ton assistant local.";
-    KB['aide'] = "Tape /help pour voir la liste des commandes.";
-    KB['blague'] = "Pourquoi les programmeurs confondent Halloween et Noël ? Parce que Oct 31 == Dec 25.";
+    // ---------- Mega assistant script ----------
+    const $ = id => document.getElementById(id);
 
-    // Génération dynamique d'entrées volumineuses
-    (function populateKB(){
-      for(let i=1;i<=1200;i++){
-        KB['idee' + i] = "Voici une idée détaillée numéro " + i + " : description, variantes, étapes, exemples et notes techniques (ex: param=" + i + ").";
-      }
-    })();
+    // State structure stored in localStorage under key 'mega_assistant'
+    const STORAGE_KEY = 'mega_assistant_v1';
+    let state = {conversations:[], kb:{}, scheduled:[], meta:{created: new Date().toISOString()}};
 
-    // Preview KB (quelques clés affichées)
-    function updateKbPreview(){
-      const keys = Object.keys(KB).slice(0,40);
-      const out = keys.map(k=>k + " → " + (typeof KB[k] === 'string' ? KB[k].slice(0,80) : JSON.stringify(KB[k]).slice(0,80))).join("\\n");
-      document.getElementById('kbPreview').textContent = out + "\\n\\n... (KB volumineuse préremplie)";
+    // default KB
+    const DEFAULT_KB = {
+      'bonjour':['Salut ! 👋','Bonjour, comment puis-je t aider ?'],
+      'blague':['Pourquoi le chat aime le clavier ? Parce qu il aime les touches.' ],
+    };
+
+    // load/save
+    function load(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(raw) state = JSON.parse(raw);
+        if(!state.kb) state.kb = DEFAULT_KB;
+      }catch(e){ console.error('load error', e); state = {conversations:[], kb:DEFAULT_KB, scheduled:[], meta:{}}; }
+      refreshUI();
     }
-    updateKbPreview();
+    function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); updateUsage(); }
 
-    // Basic utilities
-    function choose(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
-    function respond(q){
-      q = (q||"").toLowerCase().trim();
-      if(!q) return "Écris quelque chose ou tape /help.";
-      // commands
-      if(q === '/help') return "Commandes: /help /about /clear /stats /theme /calc EXPRESSION ; enseigner: ajoute:clé=>réponse";
-      if(q === '/about') return "Assistant statique — tout reste local.";
-      if(q === '/stats') return "KB keys: " + Object.keys(KB).length + " — messages this session unknown in static mode.";
-      if(q.startsWith('/calc ')) {
-        const expr=q.slice(6).replace(/[^0-9+\\-*/().^ %]/g,'');
-        try{ const val = Function('return ('+expr.replace(/\\^/g,'**')+')')(); return 'Résultat: ' + val; }catch(e){ return 'Erreur calcul: ' + e.message; }
+    function updateUsage(){ try{ const size = new Blob([localStorage.getItem(STORAGE_KEY) || '']).size; $('usage').textContent = Math.round(size/1024)+' KB'; }catch(e){ $('usage').textContent='—' } }
+
+    // conversation helpers
+    function createConv(title='Conversation'){ const conv = {id:'c_'+Math.random().toString(36).slice(2,9), title, created:new Date().toISOString(), messages:[]}; state.conversations.unshift(conv); save(); renderConvs(); return conv; }
+    function duplicateConv(id){ const src = state.conversations.find(c=>c.id===id); if(!src) return; const copy = JSON.parse(JSON.stringify(src)); copy.id='c_'+Math.random().toString(36).slice(2,9); copy.title += ' (copie)'; copy.created=new Date().toISOString(); state.conversations.unshift(copy); save(); renderConvs(); }
+    function deleteConv(id){ state.conversations = state.conversations.filter(c=>c.id!==id); if(activeConvId===id) activeConvId = state.conversations[0]?.id || null; save(); renderConvs(); renderActive(); }
+    function renameConv(id,newTitle){ const c=state.conversations.find(x=>x.id===id); if(c){ c.title=newTitle; save(); renderConvs(); renderActive(); } }
+
+    // active conv
+    let activeConvId = null;
+    function setActive(id){ activeConvId = id; renderConvs(); renderActive(); }
+
+    // render conv list
+    function renderConvs(filter=''){
+      const el = $('convList'); el.innerHTML='';
+      const list = state.conversations.filter(c=>c.title.toLowerCase().includes(filter.toLowerCase()) || c.messages.some(m=>m.text.toLowerCase().includes(filter.toLowerCase())));
+      for(const c of list){
+        const div = document.createElement('div'); div.className='conv-item'+(c.id===activeConvId?' active':'');
+        div.innerHTML = `<div><strong>${escapeHtml(c.title)}</strong><div class='small'>${c.messages.length} msg • ${new Date(c.created).toLocaleString()}</div></div>`;
+        div.addEventListener('click', ()=> setActive(c.id));
+        el.appendChild(div);
       }
-      if(q === '/clear'){ transcript.innerHTML=''; return 'Conversation effacée.'; }
-      // teach
-      if(q.startsWith('ajoute:')){
-        const body = q.slice(7);
-        const parts = body.split('=>');
-        if(parts.length===2){ const key=parts[0].trim(); const val=parts[1].trim(); if(key && val){ KB[key]=val; updateKbPreview(); return "✅ Appris: " + key; } }
-        return "Format invalide. Utilise: ajoute:clé=>réponse";
-      }
-      // search for KB keys
-      for(const k of Object.keys(KB).sort((a,b)=>b.length-a.length)){
-        if(q === k) return KB[k];
-        if(q.includes(k)) return KB[k];
-      }
-      // check common words
-      if(q.includes('bonjour') || q.includes('salut')) return KB['bonjour'];
-      if(q.includes('blague')) return KB['blague'];
-      // fallback: try to find any 'idee' key number
-      const match = q.match(/idee(\\d+)/);
-      if(match){ const idx = Number(match[1]); return KB['idee'+idx] || 'Idée introuvable.'; }
-      return "Désolé, je n'ai pas appris cela. Utilise 'ajoute:clé=>réponse' pour m'enseigner.";
+      $('nbConv').textContent = state.conversations.length; $('nbMsg').textContent = state.conversations.reduce((s,c)=>s+c.messages.length,0);
     }
+
+    // render chat
+    function renderActive(){
+      $('convTitle').textContent = activeConvId ? (state.conversations.find(c=>c.id===activeConvId).title) : '— aucune —';
+      const chat = $('chat'); chat.innerHTML='';
+      if(!activeConvId) return;
+      const conv = state.conversations.find(c=>c.id===activeConvId);
+      for(const m of conv.messages){
+        const d = document.createElement('div'); d.className = 'msg ' + (m.role==='user'?'user':'bot');
+        d.innerHTML = formatMessage(m.text) + `<div class='meta'>${new Date(m.time).toLocaleString()}</div>`;
+        // actions
+        const actions = document.createElement('div'); actions.style.marginTop='6px'; actions.className='small';
+        actions.innerHTML = `<button data-id='${m.id}' class='edit'>Edit</button> <button data-id='${m.id}' class='del'>Delete</button> <button data-id='${m.id}' class='react'>👍</button>`;
+        d.appendChild(actions);
+        chat.appendChild(d);
+      }
+      chat.scrollTop = chat.scrollHeight;
+      attachMessageActions();
+    }
+
+    function appendMessage(role,text,opts={}){
+      if(!activeConvId) { const c = createConv('Conversation auto'); activeConvId=c.id; }
+      const conv = state.conversations.find(c=>c.id===activeConvId);
+      const msg = {id:'m_'+Math.random().toString(36).slice(2,9), role, text, time: (opts.time || new Date().toISOString()), tags: opts.tags||[]};
+      conv.messages.push(msg); save(); renderActive(); renderConvs();
+    }
+
+    // basics: escape and format
+    function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function formatMessage(s){ // lightweight markdown: **bold**, *italic*, `code`
+      let t = escapeHtml(s);
+      t = t.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      t = t.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      t = t.replace(/`([^`]+)`/g, '<code>$1</code>');
+      t = t.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+      t = t.replace(/\n/g, '<br/>');
+      return t;
+    }
+
+    // simple reply engine
+    function replyTo(text){
+      const msg = text.toLowerCase().trim();
+      if(msg==='/help') return helpText();
+      if(msg==='/about') return 'Assistant Méga — tout reste local.';
+      if(msg.startsWith('/calc')){ const exp = text.slice(5).trim(); return calc(exp); }
+      if(msg.startsWith('/schedule')){ // /schedule 2025-12-31T23:59:00 message
+        const parts = text.split(' '); if(parts.length<3) return 'Format: /schedule ISO_DATETIME ton message'; const when = parts[1]; const content = parts.slice(2).join(' ');
+        scheduleMessage(when, content); return 'Planifié: ' + content + ' à ' + when;
+      }
+      if(msg.startsWith('ajoute:')){ const b = text.slice(7); const parts = b.split('=>'); if(parts.length===2){ const k=parts[0].trim().toLowerCase(); const r=parts[1].trim(); if(!state.kb[k]) state.kb[k]=[]; state.kb[k].push(r); save(); return 'Appris: '+k; } return "Format invalide: ajoute:mot=>réponse"; }
+      // kb exact or includes
+      for(const key of Object.keys(state.kb||{}).sort((a,b)=>b.length-a.length)){ if(msg===key || msg.includes(key)) return sample(state.kb[key]); }
+      if(msg.includes('bonjour')||msg.includes('salut')) return sample(state.kb['bonjour']||['Salut !']);
+      return "Désolé, je ne sais pas encore répondre — utilise 'ajoute:mot=>réponse' pour m'enseigner.";
+    }
+
+    function helpText(){ return 'Commandes: /help /about /clear /calc /schedule YYYY-MM-DDTHH:MM:SS message'; }
+
+    function sample(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+    // calculator (safe)
+    function calc(expr){ try{ const safe = expr.replace(/[^0-9+\-*/().^ %]/g,''); const js = safe.replace(/\^/g,'**'); const val = Function('return ('+js+')')(); return 'Résultat: '+val; }catch(e){ return 'Erreur calcul: '+e.message; } }
+
+    // scheduled messages
+    function scheduleMessage(iso, text){ const job = {id:'s_'+Math.random().toString(36).slice(2,9), time:iso, text, convId: activeConvId}; state.scheduled.push(job); save(); renderScheduled(); }
+    function renderScheduled(){ const el = $('schedList'); el.innerHTML=''; for(const s of state.scheduled){ const li = document.createElement('li'); li.textContent = `${s.time} → ${s.text} (${s.convId||'no conv'})`; el.appendChild(li); } }
+    setInterval(()=>{ // check scheduled
+      const now = new Date(); const toRun = state.scheduled.filter(s=> new Date(s.time) <= now);
+      for(const s of toRun){ if(s.convId) { const prevActive = activeConvId; activeConvId = s.convId; appendMessage('bot', s.text); activeConvId = prevActive; } else { appendMessage('bot', s.text); } state.scheduled = state.scheduled.filter(x=>x.id!==s.id); save(); renderScheduled(); }
+    }, 2000);
+
+    // message actions
+    function attachMessageActions(){ document.querySelectorAll('.edit').forEach(b=> b.addEventListener('click', e=>{ const id=e.target.dataset.id; editMessage(id); })); document.querySelectorAll('.del').forEach(b=> b.addEventListener('click', e=>{ const id=e.target.dataset.id; deleteMessage(id); })); document.querySelectorAll('.react').forEach(b=> b.addEventListener('click', e=>{ const id=e.target.dataset.id; reactMessage(id); })); }
+
+    function findMessage(id){ for(const c of state.conversations){ const m = c.messages.find(x=>x.id===id); if(m) return {conv:c, msg:m}; } return null; }
+    function editMessage(id){ const found = findMessage(id); if(!found) return; const newText = prompt('Modifier le message', found.msg.text); if(newText!=null){ found.msg.text = newText; save(); renderActive(); } }
+    function deleteMessage(id){ const found = findMessage(id); if(!found) return; found.conv.messages = found.conv.messages.filter(x=>x.id!==id); save(); renderActive(); renderConvs(); }
+    function reactMessage(id){ const found = findMessage(id); if(!found) return; found.msg.reactions = (found.msg.reactions||0)+1; save(); renderActive(); }
+
+    // edit: append bot response helper
+    function appendBotResponse(text){ appendMessage('bot', text); if(ttsEnabled) speak(text); }
+
+    // TTS
+    let ttsEnabled = true; function speak(text){ if(!('speechSynthesis' in window)) return; const u = new SpeechSynthesisUtterance(text); u.lang='fr-FR'; window.speechSynthesis.speak(u); }
+
+    // export/import
+    function exportAll(){ const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='mega_assistant_export_'+(new Date().toISOString())+'.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); }
+    function exportConv(){ if(!activeConvId) return alert('Aucune conversation active'); const conv = state.conversations.find(c=>c.id===activeConvId); const blob = new Blob([JSON.stringify(conv, null, 2)], {type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=(conv.title||'conversation')+'.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); }
+    function importFile(file){ if(!file) return; const r=new FileReader(); r.onload = e=>{ try{ const obj=JSON.parse(e.target.result); if(obj.conversations||obj.kb){ // whole state
+          if(obj.conversations) state.conversations = obj.conversations.concat(state.conversations);
+          if(obj.kb) state.kb = {...state.kb,...obj.kb};
+          save(); renderConvs(); renderActive(); alert('Import OK');
+        } else if(obj.title && obj.messages){ // single conv
+          obj.id='c_'+Math.random().toString(36).slice(2,9); state.conversations.unshift(obj); save(); renderConvs(); alert('Conversation importée');
+        } else alert('Format non reconnu'); }catch(err){ alert('Erreur import: '+err.message); } };
+      r.readAsText(file);
+    }
+
+    // search messages global
+    function searchAll(q){ const res=[]; for(const c of state.conversations){ for(const m of c.messages){ if(m.text.toLowerCase().includes(q.toLowerCase())) res.push({conv:c.title, time:m.time, text:m.text}); } } return res; }
+
+    // small analytics chart
+    function drawChart(){ const canvas = $('chart'); const ctx = canvas.getContext('2d'); ctx.clearRect(0,0,canvas.width,canvas.height); const counts = state.conversations.map(c=>c.messages.length); const total = counts.reduce((s,n)=>s+n,0); $('statTotal').textContent = total; if(counts.length===0) return; const w = canvas.width, h=canvas.height; const max = Math.max(...counts); const barW = Math.floor(w / counts.length) - 4; counts.forEach((v,i)=>{ const x = 4 + i*(barW+4); const barH = Math.round((v/max)*(h-20)); ctx.fillStyle = 'rgba(6,182,212,0.8)'; ctx.fillRect(x, h-10-barH, barW, barH); ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.fillText(v, x+4, h-12-barH); }); }
 
     // UI wiring
-    document.getElementById('sendBtn').addEventListener('click', ()=>{
-      const t = document.getElementById('inputMain').value.trim();
-      if(!t) return;
-      append(t,'user');
-      const r = respond(t);
-      setTimeout(()=>{ append(r,'bot'); }, 200 + Math.random()*500);
-      document.getElementById('inputMain').value='';
+    $('btnNew').addEventListener('click', ()=>{ const t = prompt('Titre'); if(t) { const c=createConv(t); setActive(c.id); } });
+    $('btnExportAll').addEventListener('click', exportAll);
+    $('btnImport').addEventListener('click', ()=> $('fileImport').click());
+    $('fileImport').addEventListener('change', e=> importFile(e.target.files[0]));
+    $('convSearch').addEventListener('input', e=> renderConvs(e.target.value));
+
+    $('send').addEventListener('click', ()=>{ const text = $('input').value.trim(); if(!text) return; appendMessage('user', text); $('input').value=''; const r = replyTo(text); if(r) setTimeout(()=> appendBotResponse(r), 300+Math.random()*600); });
+    $('btnClear').addEventListener('click', ()=>{ if(!activeConvId) return; if(confirm('Effacer conversation ?')){ const c=state.conversations.find(x=>x.id===activeConvId); c.messages=[]; save(); renderActive(); renderConvs(); } });
+    $('btnRename').addEventListener('click', ()=>{ if(!activeConvId) return; const t = prompt('Nouveau titre', state.conversations.find(c=>c.id===activeConvId).title); if(t) renameConv(activeConvId, t); });
+    $('btnDuplicate').addEventListener('click', ()=>{ if(!activeConvId) return duplicateConv(activeConvId); });
+    $('btnDelete').addEventListener('click', ()=>{ if(!activeConvId) return; if(confirm('Supprimer conversation ?')) deleteConv(activeConvId); });
+    document.querySelectorAll('.chip[data-text]').forEach(ch=> ch.addEventListener('click', e=> { $('input').value = e.target.dataset.text; $('input').focus(); }));
+    $('ttsToggle').addEventListener('click', ()=>{ ttsEnabled = !ttsEnabled; $('ttsToggle').textContent = 'TTS: ' + (ttsEnabled ? 'ON':'OFF'); });
+    $('exportConv').addEventListener('click', exportConv);
+
+    // keyboard
+    document.addEventListener('keydown', e=>{
+      if(e.ctrlKey && e.key.toLowerCase()==='n'){ e.preventDefault(); const c=createConv('Nouvelle conversation'); setActive(c.id); }
+      if(e.ctrlKey && e.key.toLowerCase()==='s'){ e.preventDefault(); exportConv(); }
     });
 
-    // quick buttons
-    document.querySelectorAll('.quick').forEach(btn=> btn.addEventListener('click', e=>{
-      const v = e.currentTarget.dataset.text;
-      document.getElementById('inputMain').value = v;
-      document.getElementById('sendBtn').click();
-    }));
+    // message actions (delegated by attachMessageActions)
+    function attachMessageActions(){ document.querySelectorAll('.msg .edit').forEach(b=> b.addEventListener('click', e=>{ const id = e.target.dataset.id; editMessage(id); })); }
 
-    // teach button: opens prompt to add a KB entry
-    document.getElementById('teachBtn').addEventListener('click', ()=>{
-      const raw = prompt("Format: clé=>réponse (par ex: bonjour=>Salut)","nouveau=>Réponse...");
-      if(!raw) return;
-      const parts = raw.split('=>');
-      if(parts.length===2){ const k=parts[0].trim(); const v=parts[1].trim(); KB[k]=v; updateKbPreview(); alert("Appris: " + k); } else alert("Format invalide.");
-    });
+    // init
+    load(); if(state.conversations.length===0){ const c=createConv('Conversation exemple'); activeConvId=c.id; appendBotResponse('Bienvenue — tape /help pour commencer.'); }
+    renderConvs(); renderActive(); renderScheduled(); drawChart(); setInterval(drawChart, 3000);
 
-    // export KB + small state as JSON
-    document.getElementById('exportBtn').addEventListener('click', ()=>{
-      const obj = {kb:KB, exportedAt: (new Date()).toISOString()};
-      const blob = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href=url; a.download='assistant-kb-export.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-    });
-
-    // clear transcript
-    document.getElementById('clearBtn').addEventListener('click', ()=>{
-      if(confirm('Effacer la conversation ?')){ transcript.innerHTML=''; }
-    });
-
-    // download page (save HTML) — note: on iPad Safari this may open in a new tab with HTML code; use "Partage > Enregistrer dans Fichiers"
-    document.getElementById('downloadBtn').addEventListener('click', ()=>{
-      const html = '<!doctype html>\\n' + document.documentElement.outerHTML;
-      const blob = new Blob([html], {type:'text/html'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = 'assistant-static.html'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-      alert('Si le téléchargement ne démarre pas automatiquement, utilisez Partager > Enregistrer dans Fichiers et collez le contenu HTML.');
-    });
-
-    // small greeting
-    append("Bonjour — je suis l'assistant statique. Tape /help pour commencer.","bot");
-
-    // Save history in localStorage (limited)
-    (function saveHistory(){
-      try{
-        const h = JSON.parse(localStorage.getItem('assistant_history') || '[]');
-        h.unshift({at:(new Date()).toISOString(), event:'loaded static assistant', size:Object.keys(KB).length});
-        localStorage.setItem('assistant_history', JSON.stringify(h.slice(0,50)));
-      }catch(e){}
-    })();
-
-    // End of main assistant script
+    // expose for debugging
+    window.__megaAssistant = {state, save, createConv, appendMessage};
   </script>
-
-  <!-- filler comments to increase file size and reach 2000+ lines -->
-  <!-- filler comment 1 -->
-  <!-- filler comment 2 -->
-  <!-- filler comment 3 -->
-  <!-- filler comment 4 -->
-  <!-- filler comment 5 -->
-  <!-- filler comment 6 -->
-  <!-- filler comment 7 -->
-  <!-- filler comment 8 -->
-  <!-- filler comment 9 -->
-  <!-- filler comment 10 -->
-  <!-- filler comment 11 -->
-  <!-- filler comment 12 -->
-  <!-- filler comment 13 -->
-  <!-- filler comment 14 -->
-  <!-- filler comment 15 -->
-  <!-- filler comment 16 -->
-  <!-- filler comment 17 -->
-  <!-- filler comment 18 -->
-  <!-- filler comment 19 -->
-  <!-- filler comment 20 -->
-  <!-- filler comment 21 -->
-  <!-- filler comment 22 -->
-  <!-- filler comment 23 -->
-  <!-- filler comment 24 -->
-  <!-- filler comment 25 -->
-  <!-- filler comment 26 -->
-  <!-- filler comment 27 -->
-  <!-- filler comment 28 -->
-  <!-- filler comment 29 -->
-  <!-- filler comment 30 -->
-  <!-- filler comment 31 -->
-  <!-- filler comment 32 -->
-  <!-- filler comment 33 -->
-  <!-- filler comment 34 -->
-  <!-- filler comment 35 -->
-  <!-- filler comment 36 -->
-  <!-- filler comment 37 -->
-  <!-- filler comment 38 -->
-  <!-- filler comment 39 -->
-  <!-- filler comment 40 -->
-  <!-- filler comment 41 -->
-  <!-- filler comment 42 -->
-  <!-- filler comment 43 -->
-  <!-- filler comment 44 -->
-  <!-- filler comment 45 -->
-  <!-- filler comment 46 -->
-  <!-- filler comment 47 -->
-  <!-- filler comment 48 -->
-  <!-- filler comment 49 -->
-  <!-- filler comment 50 -->
-  <!-- filler comment 51 -->
-  <!-- filler comment 52 -->
-  <!-- filler comment 53 -->
-  <!-- filler comment 54 -->
-  <!-- filler comment 55 -->
-  <!-- filler comment 56 -->
-  <!-- filler comment 57 -->
-  <!-- filler comment 58 -->
-  <!-- filler comment 59 -->
-  <!-- filler comment 60 -->
-  <!-- filler comment 61 -->
-  <!-- filler comment 62 -->
-  <!-- filler comment 63 -->
-  <!-- filler comment 64 -->
-  <!-- filler comment 65 -->
-  <!-- filler comment 66 -->
-  <!-- filler comment 67 -->
-  <!-- filler comment 68 -->
-  <!-- filler comment 69 -->
-  <!-- filler comment 70 -->
-  <!-- filler comment 71 -->
-  <!-- filler comment 72 -->
-  <!-- filler comment 73 -->
-  <!-- filler comment 74 -->
-  <!-- filler comment 75 -->
-  <!-- filler comment 76 -->
-  <!-- filler comment 77 -->
-  <!-- filler comment 78 -->
-  <!-- filler comment 79 -->
-  <!-- filler comment 80 -->
-  <!-- filler comment 81 -->
-  <!-- filler comment 82 -->
-  <!-- filler comment 83 -->
-  <!-- filler comment 84 -->
-  <!-- filler comment 85 -->
-  <!-- filler comment 86 -->
-  <!-- filler comment 87 -->
-  <!-- filler comment 88 -->
-  <!-- filler comment 89 -->
-  <!-- filler comment 90 -->
-  <!-- filler comment 91 -->
-  <!-- filler comment 92 -->
-  <!-- filler comment 93 -->
-  <!-- filler comment 94 -->
-  <!-- filler comment 95 -->
-  <!-- filler comment 96 -->
-  <!-- filler comment 97 -->
-  <!-- filler comment 98 -->
-  <!-- filler comment 99 -->
-  <!-- filler comment 100 -->
-  <!-- filler comment 101 -->
-  <!-- filler comment 102 -->
-  <!-- filler comment 103 -->
-  <!-- filler comment 104 -->
-  <!-- filler comment 105 -->
-  <!-- filler comment 106 -->
-  <!-- filler comment 107 -->
-  <!-- filler comment 108 -->
-  <!-- filler comment 109 -->
-  <!-- filler comment 110 -->
-  <!-- filler comment 111 -->
-  <!-- filler comment 112 -->
-  <!-- filler comment 113 -->
-  <!-- filler comment 114 -->
-  <!-- filler comment 115 -->
-  <!-- filler comment 116 -->
-  <!-- filler comment 117 -->
-  <!-- filler comment 118 -->
-  <!-- filler comment 119 -->
-  <!-- filler comment 120 -->
-  <!-- filler comment 121 -->
-  <!-- filler comment 122 -->
-  <!-- filler comment 123 -->
-  <!-- filler comment 124 -->
-  <!-- filler comment 125 -->
-  <!-- filler comment 126 -->
-  <!-- filler comment 127 -->
-  <!-- filler comment 128 -->
-  <!-- filler comment 129 -->
-  <!-- filler comment 130 -->
-  <!-- filler comment 131 -->
-  <!-- filler comment 132 -->
-  <!-- filler comment 133 -->
-  <!-- filler comment 134 -->
-  <!-- filler comment 135 -->
-  <!-- filler comment 136 -->
-  <!-- filler comment 137 -->
-  <!-- filler comment 138 -->
-  <!-- filler comment 139 -->
-  <!-- filler comment 140 -->
-  <!-- filler comment 141 -->
-  <!-- filler comment 142 -->
-  <!-- filler comment 143 -->
-  <!-- filler comment 144 -->
-  <!-- filler comment 145 -->
-  <!-- filler comment 146 -->
-  <!-- filler comment 147 -->
-  <!-- filler comment 148 -->
-  <!-- filler comment 149 -->
-  <!-- filler comment 150 -->
-  <!-- filler comment 151 -->
-  <!-- filler comment 152 -->
-  <!-- filler comment 153 -->
-  <!-- filler comment 154 -->
-  <!-- filler comment 155 -->
-  <!-- filler comment 156 -->
-  <!-- filler comment 157 -->
-  <!-- filler comment 158 -->
-  <!-- filler comment 159 -->
-  <!-- filler comment 160 -->
-  <!-- filler comment 161 -->
-  <!-- filler comment 162 -->
-  <!-- filler comment 163 -->
-  <!-- filler comment 164 -->
-  <!-- filler comment 165 -->
-  <!-- filler comment 166 -->
-  <!-- filler comment 167 -->
-  <!-- filler comment 168 -->
-  <!-- filler comment 169 -->
-  <!-- filler comment 170 -->
-  <!-- filler comment 171 -->
-  <!-- filler comment 172 -->
-  <!-- filler comment 173 -->
-  <!-- filler comment 174 -->
-  <!-- filler comment 175 -->
-  <!-- filler comment 176 -->
-  <!-- filler comment 177 -->
-  <!-- filler comment 178 -->
-  <!-- filler comment 179 -->
-  <!-- filler comment 180 -->
-  <!-- filler comment 181 -->
-  <!-- filler comment 182 -->
-  <!-- filler comment 183 -->
-  <!-- filler comment 184 -->
-  <!-- filler comment 185 -->
-  <!-- filler comment 186 -->
-  <!-- filler comment 187 -->
-  <!-- filler comment 188 -->
-  <!-- filler comment 189 -->
-  <!-- filler comment 190 -->
-  <!-- filler comment 191 -->
-  <!-- filler comment 192 -->
-  <!-- filler comment 193 -->
-  <!-- filler comment 194 -->
-  <!-- filler comment 195 -->
-  <!-- filler comment 196 -->
-  <!-- filler comment 197 -->
-  <!-- filler comment 198 -->
-  <!-- filler comment 199 -->
-  <!-- filler comment 200 -->
-  <!-- (le fichier contient encore beaucoup de lignes similaires — copie tout pour atteindre 2000+) -->
-
 </body>
   </html>
